@@ -57,9 +57,10 @@ if generate_btn:
             try:
                 # Instantiate native ChatGroq instance safely to eliminate 405 routing conflicts
                 llm = ChatGroq(
-                    model="eta-llama/llama-4-scout-17b-16e-instruct",
+                    model="openai/gpt-oss-120b",
                     groq_api_key=api_key,
-                    temperature=0.1
+                    temperature=0.1,
+                    max_tokens=1000
                 )
                 
                 parser = PydanticOutputParser(pydantic_object=TestCaseSuite)
