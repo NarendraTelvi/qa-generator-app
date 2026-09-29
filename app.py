@@ -3,10 +3,9 @@ import json
 from pydantic import BaseModel, Field
 from typing import List
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import PydanticOutputParser
 from langchain_groq import ChatGroq
 
-# 1. Define Structured Pydantic Scheme Layout 
+# 1. Define Structured Pydantic Schema Layout
 class TestCase(BaseModel):
     id: str = Field(description="Unique identifier like TC001, TC002")
     title: str = Field(description="Clear, concise title of what is being tested")
@@ -21,9 +20,9 @@ class TestCaseSuite(BaseModel):
 # 2. Main Streamlit Layout Rendering Frame
 st.set_page_config(page_title="AI Test Case Generator", layout="wide")
 st.title("🤖 AI-Powered Test Case Generator")
-st.caption("Powered by ultra-fast open-weight models via official Groq libraries.")
+st.caption("Powered by native structured tool routing to ensure error-free JSON compliance.")
 
-# Pull the key securely from the hidden workspace environment 
+# Pull the key securely from the hidden workspace environment
 if "GROQ_API_KEY" in st.secrets:
     api_key = st.secrets["GROQ_API_KEY"]
 else:
@@ -37,7 +36,7 @@ with st.sidebar:
     else:
         st.warning("⚠️ GROQ_API_KEY not found in Streamlit Secrets.")
         api_key = st.text_input("Enter your Groq API Key manually (gsk_...):", type="password")
-        st.markdown("[Get a free Groq API key instantly](https://console.groq.com/)")
+        st.markdown("[Get a free Groq API key instantly](https://groq.com)")
 
 user_story = st.text_area(
     "Paste your User Story and Acceptance Criteria here:",
@@ -46,7 +45,7 @@ user_story = st.text_area(
 )
 generate_btn = st.button("Generate Test Suite", type="primary")
 
-# 3. Native Groq Execution Pipeline
+# 3. Native Groq Execution Pipeline with Structured Tool Binding
 if generate_btn:
     if not api_key:
         st.error("Authentication Missing: Please paste your key in the sidebar input box to run a test.")
@@ -55,26 +54,25 @@ if generate_btn:
     else:
         with st.spinner("Generating test suites using ultra-fast native inference..."):
             try:
-                # Instantiate native ChatGroq instance safely to eliminate 405 routing conflicts
-                llm = ChatGroq(
-                    model="openai/gpt-oss-120b",
+                # Instantiate native ChatGroq instance safely
+                base_llm = ChatGroq(
+                    model="qwen/qwen3.8-27b",
                     groq_api_key=api_key,
                     temperature=0.1,
                     max_tokens=1000
                 )
                 
-                parser = PydanticOutputParser(pydantic_object=TestCaseSuite)
+                # Use native structured outputs to eliminate formatting errors entirely
+                llm = base_llm.with_structured_output(TestCaseSuite)
 
                 prompt = ChatPromptTemplate.from_messages([
-                    ("system", "You are an elite QA Automation Engineer. Analyze the user story and generate a thorough test suite containing happy paths, negative tests, and edge cases.\n{format_instructions}"),
+                    ("system", "You are an elite QA Automation Engineer. Analyze the user story and generate a thorough test suite containing happy paths, negative tests, and edge cases."),
                     ("human", "{user_story}")
                 ])
 
-                chain = prompt | llm | parser
-                response = chain.invoke({
-                    "user_story": user_story,
-                    "format_instructions": parser.get_format_instructions()
-                })
+                # Construct simple error-proof chain
+                chain = prompt | llm
+                response: TestCaseSuite = chain.invoke({"user_story": user_story})
 
                 st.success(f"Generated {len(response.test_cases)} Test Cases successfully!")
                 
