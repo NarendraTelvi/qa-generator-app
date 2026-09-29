@@ -4,9 +4,9 @@ from pydantic import BaseModel, Field
 from typing import List
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 
-# 1. Define the Data Structure Expectations using Pydantic
+# 1. Define Structured Pydantic Scheme Layout 
 class TestCase(BaseModel):
     id: str = Field(description="Unique identifier like TC001, TC002")
     title: str = Field(description="Clear, concise title of what is being tested")
@@ -18,45 +18,47 @@ class TestCase(BaseModel):
 class TestCaseSuite(BaseModel):
     test_cases: List[TestCase]
 
-# 2. Streamlit UI Layout Setup
+# 2. Main Streamlit Layout Rendering Frame
 st.set_page_config(page_title="AI Test Case Generator", layout="wide")
 st.title("🤖 AI-Powered Test Case Generator")
-st.caption("Transform Requirements into Structured QA Test Suites using Groq Cloud.")
+st.caption("Powered by ultra-fast open-weight models via official Groq libraries.")
 
-# Check the hidden cloud vault for the variable first
+# Pull the key securely from the hidden workspace environment 
 if "GROQ_API_KEY" in st.secrets:
     api_key = st.secrets["GROQ_API_KEY"]
 else:
     api_key = None
 
-# Sidebar Authentication Panel Fallback
+# Sidebar Fallback Authentication Box Setup
 with st.sidebar:
     st.header("Authentication")
     if api_key:
-        st.success("🔒 API Key loaded automatically from Streamlit Secrets vault!")
+        st.success("🔒 API Key loaded from Streamlit Secrets vault!")
     else:
         st.warning("⚠️ GROQ_API_KEY not found in Streamlit Secrets.")
-        # Provide backup text box input if secret injection hasn't been set up yet
-        api_key = st.text_input("Enter your Groq API Key manually to test (gsk_...):", type="password")
+        api_key = st.text_input("Enter your Groq API Key manually (gsk_...):", type="password")
         st.markdown("[Get a free Groq API key instantly](https://console.groq.com/)")
 
-user_story = st.text_area("Paste your User Story and Acceptance Criteria here:", height=200)
+user_story = st.text_area(
+    "Paste your User Story and Acceptance Criteria here:",
+    height=200,
+    placeholder="As a logged-in user..."
+)
 generate_btn = st.button("Generate Test Suite", type="primary")
 
-# 3. LLM Processing Pipeline
+# 3. Native Groq Execution Pipeline
 if generate_btn:
     if not api_key:
         st.error("Authentication Missing: Please paste your key in the sidebar input box to run a test.")
     elif not user_story.strip():
         st.warning("Please enter a valid user story.")
     else:
-        with st.spinner("Generating test suites using ultra-fast inference endpoints..."):
+        with st.spinner("Generating test suites using ultra-fast native inference..."):
             try:
-                # Direct LangChain connection map pointing to the Groq processing layout
-                llm = ChatOpenAI(
+                # Instantiate native ChatGroq instance safely to eliminate 405 routing conflicts
+                llm = ChatGroq(
                     model="llama-3.3-70b-versatile",
-                    openai_api_key=api_key,
-                    base_url="https://groq.com",
+                    groq_api_key=api_key,
                     temperature=0.1
                 )
                 parser = PydanticOutputParser(pydantic_object=TestCaseSuite)
@@ -74,6 +76,7 @@ if generate_btn:
 
                 st.success(f"Generated {len(response.test_cases)} Test Cases successfully!")
                 
+                # Render Test Cards dynamically inside UI blocks
                 for tc in response.test_cases:
                     with st.expander(f"**[{tc.id}]** - {tc.title} ({tc.type})"):
                         st.markdown(f"**Pre-conditions:** {tc.pre_conditions}")
