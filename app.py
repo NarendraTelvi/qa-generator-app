@@ -27,7 +27,8 @@ class TestCaseSuite(BaseModel):
 
 # 2. Main Streamlit Layout Rendering Frame
 st.set_page_config(page_title="AI Test Case Generator", layout="wide")
-st.title("🤖 AI-Powered Test Case Generator")
+st.title("AI-Powered Test Case Generator")
+
 st.caption("Resilient parsing pipeline configured to intercept and repair token-limit cutoffs.")
 
 # Pull the key securely from the hidden workspace environment
@@ -131,7 +132,7 @@ if generate_btn:
                     label="Download Test Suite (JSON)",
                     file_name="test_suite.json",
                     mime="application/json",
-                    data=json.dumps(suite_data.model_dump(), indent=2)
+                    data=json.dumps(suite_data.model_dump(), indent=2,ensure_ascii=True)
                 )
             except json.JSONDecodeError as jde:
                 st.error("Could not parse the model generation text bounds. Please try running the generation loop step again.")
