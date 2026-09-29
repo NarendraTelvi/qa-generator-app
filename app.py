@@ -4,9 +4,9 @@ from pydantic import BaseModel, Field
 from typing import List
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
-from langchain_openai import ChatOpenAI # Groq uses the standard OpenAI client protocol compatibility
+from langchain_openai import ChatOpenAI
 
-# Define structured Pydantic expectations for reliable JSON generation
+# 1. Define the Data Structure Expectations using Pydantic
 class TestCase(BaseModel):
     id: str = Field(description="Unique identifier like TC001, TC002")
     title: str = Field(description="Clear, concise title of what is being tested")
@@ -18,53 +18,75 @@ class TestCase(BaseModel):
 class TestCaseSuite(BaseModel):
     test_cases: List[TestCase]
 
-st.set_page_config(page_title="Free AI Test Case Generator", layout="wide")
-st.title("🤖 Free Open-Source AI Test Case Generator")
-st.caption("Hosted for free on Streamlit Cloud, powered by open-source models.")
+# 2. Streamlit UI Layout Setup
+st.set_page_config(page_title="AI Test Case Generator", layout="wide")
+st.title("🤖 AI-Powered Test Case Generator")
+st.caption("Transform Requirements into Structured QA Test Suites using Groq Cloud.")
 
-# Fetch the API key safely from Streamlit's environment settings
-GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", "")
+# Check the hidden cloud vault for the variable first
+if "GROQ_API_KEY" in st.secrets:
+    api_key = st.secrets["GROQ_API_KEY"]
+else:
+    api_key = None
 
-if not GROQ_API_KEY:
-    st.sidebar.warning("⚠️ GROQ_API_KEY not found in Streamlit Secrets. Please enter it below to test:")
-    GROQ_API_KEY = st.sidebar.text_input("Enter Groq API Key manually", type="password")
+# Sidebar Authentication Panel Fallback
+with st.sidebar:
+    st.header("Authentication")
+    if api_key:
+        st.success("🔒 API Key loaded automatically from Streamlit Secrets vault!")
+    else:
+        st.warning("⚠️ GROQ_API_KEY not found in Streamlit Secrets.")
+        # Provide backup text box input if secret injection hasn't been set up yet
+        api_key = st.text_input("Enter your Groq API Key manually to test (gsk_...):", type="password")
+        st.markdown("[Get a free Groq API key instantly](https://console.groq.com/)")
 
 user_story = st.text_area("Paste your User Story and Acceptance Criteria here:", height=200)
+generate_btn = st.button("Generate Test Suite", type="primary")
 
-if st.button("Generate Test Suite", type="primary"):
-    if not GROQ_API_KEY:
-        st.error("Please provide a Groq API Key to proceed.")
+# 3. LLM Processing Pipeline
+if generate_btn:
+    if not api_key:
+        st.error("Authentication Missing: Please paste your key in the sidebar input box to run a test.")
     elif not user_story.strip():
         st.warning("Please enter a valid user story.")
     else:
-        with st.spinner("Processing with cloud-hosted Llama 3..."):
+        with st.spinner("Generating test suites using ultra-fast inference endpoints..."):
             try:
-                # Initialize the open-source model using Groq's high-speed free tier endpoint
+                # Direct LangChain connection map pointing to the Groq processing layout
                 llm = ChatOpenAI(
-                    model="llama3-8b-8192", 
-                    openai_api_key=GROQ_API_KEY,
-                    openai_api_base="https://groq.com",
+                    model="llama-3.3-70b-versatile",
+                    openai_api_key=api_key,
+                    base_url="https://groq.com",
                     temperature=0.1
                 )
                 parser = PydanticOutputParser(pydantic_object=TestCaseSuite)
 
                 prompt = ChatPromptTemplate.from_messages([
-                    ("system", "You are an elite QA Automation Engineer. Analyze the user story and generate a thorough test suite. Output JSON strictly matching the requested schema.\n{format_instructions}"),
+                    ("system", "You are an elite QA Automation Engineer. Analyze the user story and generate a thorough test suite containing happy paths, negative tests, and edge cases.\n{format_instructions}"),
                     ("human", "{user_story}")
                 ])
 
                 chain = prompt | llm | parser
                 response = chain.invoke({
-                    "user_story": user_story, 
+                    "user_story": user_story,
                     "format_instructions": parser.get_format_instructions()
                 })
 
-                st.success(f"Generated {len(response.test_cases)} Test Cases!")
+                st.success(f"Generated {len(response.test_cases)} Test Cases successfully!")
+                
                 for tc in response.test_cases:
                     with st.expander(f"**[{tc.id}]** - {tc.title} ({tc.type})"):
                         st.markdown(f"**Pre-conditions:** {tc.pre_conditions}")
+                        st.markdown("**Steps:**")
                         for idx, step in enumerate(tc.steps, 1):
                             st.markdown(f"{idx}. {step}")
                         st.markdown(f"**Expected Result:** *{tc.expected_result}*")
+                
+                st.download_button(
+                    label="Download Test Suite (JSON)",
+                    file_name="test_suite.json",
+                    mime="application/json",
+                    data=json.dumps(response.model_dump(), indent=2)
+                )
             except Exception as e:
-                st.error(f"Error: {str(e)}")
+                st.error(f"An unexpected tracking execution error occurred: {str(e)}")
