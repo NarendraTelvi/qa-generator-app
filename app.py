@@ -57,7 +57,7 @@ if generate_btn:
             try:
                 # Instantiate native ChatGroq instance safely to eliminate 405 routing conflicts
                 llm = ChatGroq(
-                    model="llama-3.3-70b-specdec",
+                    model="qwen/qwen3.8-27b",
                     groq_api_key=api_key,
                     temperature=0.1
                 )
